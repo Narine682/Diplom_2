@@ -10,7 +10,6 @@ from utils.helpers import random_email
 class TestAuth:
     @allure.title("Регистрация уникального пользователя")
     def test_create_unique_user(self):
-        """Проверяет, что можно зарегистрировать уникального пользователя"""
         email = random_email()
         payload = {"email": email, "password": TEST_PASSWORD, "name": TEST_NAME}
 
@@ -18,7 +17,7 @@ class TestAuth:
             response = requests.post(f"{BASE_URL}/auth/register", json=payload)
             data = response.json()
 
-        with allure.step("Проверяем, что регистрация успешна"):
+        with allure.step("Проверяем успешную регистрацию"):
             assert response.status_code == 200
             assert data["success"] is True
             assert "accessToken" in data
@@ -26,24 +25,22 @@ class TestAuth:
 
     @allure.title("Регистрация уже существующего пользователя")
     def test_create_existing_user(self):
-        """Проверяет, что регистрация с существующим email возвращает ошибку"""
         payload = {"email": TEST_EMAIL, "password": TEST_PASSWORD, "name": TEST_NAME}
 
-        with allure.step("Отправляем POST-запрос на /auth/register для существующего пользователя"):
+        with allure.step("Пробуем зарегистрировать существующего пользователя"):
             response = requests.post(f"{BASE_URL}/auth/register", json=payload)
             data = response.json()
 
-        with allure.step("Проверяем, что сервер возвращает 403 и сообщение об ошибке"):
+        with allure.step("Проверяем ошибку 403 и сообщение"):
             assert response.status_code == 403
             assert data["success"] is False
             assert "User already exists" in data["message"]
 
     @allure.title("Авторизация с валидным пользователем")
     def test_login_valid_user(self):
-        """Проверяет успешный вход с существующим пользователем"""
         payload = {"email": TEST_EMAIL, "password": TEST_PASSWORD}
 
-        with allure.step("Отправляем POST-запрос на /auth/login"):
+        with allure.step("Авторизуемся с валидными данными"):
             response = requests.post(f"{BASE_URL}/auth/login", json=payload)
             data = response.json()
 
@@ -55,14 +52,13 @@ class TestAuth:
 
     @allure.title("Авторизация с невалидным пользователем")
     def test_login_invalid_user(self):
-        """Проверяет вход с неправильным email или паролем"""
         payload = {"email": "wrong@example.com", "password": "wrongpass"}
 
-        with allure.step("Отправляем POST-запрос на /auth/login"):
+        with allure.step("Пробуем авторизоваться с неверными данными"):
             response = requests.post(f"{BASE_URL}/auth/login", json=payload)
             data = response.json()
 
-        with allure.step("Проверяем, что сервер возвращает 401 и сообщение об ошибке"):
+        with allure.step("Проверяем ошибку 401"):
             assert response.status_code == 401
             assert data["success"] is False
             assert "incorrect" in data["message"]

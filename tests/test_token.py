@@ -8,8 +8,6 @@ class TestAuthToken:
 
     @allure.title("Обновление accessToken с помощью refreshToken")
     def test_refresh_token(self):
-        """Проверяет, что refreshToken успешно обновляет accessToken"""
-
         with allure.step("Регистрируем нового пользователя"):
             email = random_email()
             reg_data = {"email": email, "password": TEST_PASSWORD, "name": TEST_NAME}
@@ -17,7 +15,7 @@ class TestAuthToken:
             reg_json = reg_resp.json()
             refresh_token = reg_json["refreshToken"]
 
-        with allure.step("Отправляем запрос на обновление токена"):
+        with allure.step("Обновляем accessToken"):
             response = requests.post(f"{BASE_URL}/auth/token", json={"token": refresh_token})
             data = response.json()
 
@@ -28,16 +26,14 @@ class TestAuthToken:
 
     @allure.title("Выход пользователя с использованием refreshToken")
     def test_logout(self):
-        """Проверяет, что пользователь может выйти (logout)"""
-
-        with allure.step("Регистрируем нового пользователя"):
+        with allure.step("Регистрируем пользователя и получаем refreshToken"):
             email = random_email()
             reg_data = {"email": email, "password": TEST_PASSWORD, "name": TEST_NAME}
             reg_resp = requests.post(f"{BASE_URL}/auth/register", json=reg_data)
             reg_json = reg_resp.json()
             refresh_token = reg_json["refreshToken"]
 
-        with allure.step("Отправляем запрос на logout"):
+        with allure.step("Отправляем  logout"):
             response = requests.post(f"{BASE_URL}/auth/logout", json={"token": refresh_token})
             data = response.json()
 

@@ -8,19 +8,17 @@ class TestOrders:
 
     @allure.title("Создание заказа авторизованным пользователем с валидными ингредиентами")
     def test_create_order_authorized(self):
-        """Проверяет создание заказа авторизованным пользователем"""
-
         with allure.step("Регистрируем нового пользователя"):
             email = random_email()
             reg_data = {"email": email, "password": TEST_PASSWORD, "name": TEST_NAME}
             reg_resp = requests.post(f"{BASE_URL}/auth/register", json=reg_data).json()
             token = reg_resp["accessToken"]
 
-        with allure.step("Получаем список ингредиентов из API"):
+        with allure.step("Получаем ингредиенты"):
             ingredients_resp = requests.get(f"{BASE_URL}/ingredients").json()
             ingredient_ids = [item["_id"] for item in ingredients_resp["data"]]
 
-        with allure.step("Создаём заказ с id ингредиентов"):
+        with allure.step("Создаём заказ"):
             payload = {"ingredients": ingredient_ids[:2]}
             response = requests.post(f"{BASE_URL}/orders", json=payload, headers={"Authorization": token})
             data = response.json()
@@ -31,9 +29,7 @@ class TestOrders:
              assert "number"in data["order"]
     @allure.title("Создание заказа без авторизации")
     def test_create_order_unauthorized(self):
-        """Проверяет ошибку при создании заказа без токена"""
-
-        with allure.step("Берём любой валидный ингредиент из API"):
+        with allure.step("Берём любой ингредиент"):
             ingredients_resp = requests.get(f"{BASE_URL}/ingredients").json()
             ingredient_ids = [item["_id"] for item in ingredients_resp["data"]]
 
@@ -45,8 +41,6 @@ class TestOrders:
 
     @allure.title("Создание заказа без списка ингредиентов")
     def test_create_order_no_ingredients(self):
-        """Проверяет ошибку при заказе без ингредиентов"""
-
         with allure.step("Регистрируем нового пользователя"):
             email = random_email()
             reg_data = {"email": email, "password": TEST_PASSWORD, "name": TEST_NAME}
@@ -64,15 +58,13 @@ class TestOrders:
 
     @allure.title("Создание заказа с несуществующим ID ингредиента")
     def test_create_order_invalid_ingredient(self):
-        """Проверяет ошибку при создании заказа с неверным ID """
-
         with allure.step("Регистрируем нового пользователя"):
             email = random_email()
             reg_data = {"email": email, "password": TEST_PASSWORD, "name": TEST_NAME}
             reg_reps = requests.post(f"{BASE_URL}/auth/register", json=reg_data).json()
             token = reg_reps["accessToken"]
 
-        with allure.step("Пробуем отправить заказ с неверным ingredient_id"):
+        with allure.step("Отправляем заказ с неверным ID"):
             response = requests.post(
                 f"{BASE_URL}/orders", json={"ingredients": ["invalid_id_123"]},
                 headers={"Authorization": token})
