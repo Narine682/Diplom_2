@@ -1,55 +1,82 @@
 import requests
+import allure
 from utils.constants import BASE_URL, TEST_PASSWORD, TEST_EMAIL, TEST_NAME
 from utils.helpers import random_email
 
+@allure.epic("Orders")
+class TestOrders:
 
-def test_create_order_authorized():
-    email = random_email()
-    reg_data = {"email": email, "password": TEST_PASSWORD, "name": TEST_NAME}
-    reg_resp = requests.post(f"{BASE_URL}/auth/register", json=reg_data).json()
+    @allure.title("Создание заказа авторизованным пользователем с валидными ингредиентами")
+    def test_create_order_authorized(self):
+        """Проверяет создание заказа авторизованным пользователем"""
 
-    token = reg_resp["accessToken"]
-    headers = {"Authorization": token}
+        with allure.step("Регистрируем нового пользователя"):
+            email = random_email()
+            reg_data = {"email": email, "password": TEST_PASSWORD, "name": TEST_NAME}
+            reg_resp = requests.post(f"{BASE_URL}/auth/register", json=reg_data).json()
+            token = reg_resp["accessToken"]
 
-    payload = {"ingredients": ["60d3b41abdacab0026a733c6", "609646e4dc916e00276b2870"]}
+        with allure.step("Получаем список ингредиентов из API"):
+            ingredients_resp = requests.get(f"{BASE_URL}/ingredients").json()
+            ingredient_ids = [item["_id"] for item in ingredients_resp["data"]]
 
-    response = requests.post(f"{BASE_URL}/orders", json=payload, headers=headers)
-    data = response.json()
+        with allure.step("Создаём заказ с id ингредиентов"):
+            payload = {"ingredients": ingredient_ids[:2]}
+            response = requests.post(f"{BASE_URL}/orders", json=payload, headers={"Authorization": token})
+            data = response.json()
 
-    assert response.status_code ==200
-    assert data["success"] is True
-    assert "order" in data
-    assert "number" in data["order"]
+        with allure.step("Проверяем успешное создание заказа"):
+             assert response.status_code ==200
+             assert data["success"] is True
+             assert "number"in data["order"]
+    @allure.title("Создание заказа без авторизации")
+    def test_create_order_unauthorized(self):
+        """Проверяет ошибку при создании заказа без токена"""
 
-def test_create_order_unauthorized():
-    response = requests.post(f"{BASE_URL}/orders",
-                             json={"ingredients": ["60d3b41abdacab0026a733c6"]})
-    assert response.status_code == 401
+        with allure.step("Берём любой валидный ингредиент из API"):
+            ingredients_resp = requests.get(f"{BASE_URL}/ingredients").json()
+            ingredient_ids = [item["_id"] for item in ingredients_resp["data"]]
 
-def test_create_order_no_ingredients():
-    email = random_email()
-    reg_data = {"email": email, "password": TEST_PASSWORD, "name": TEST_NAME}
-    reg_resp = requests.post(f"{BASE_URL}/auth/register", json=reg_data).json()
+        with allure.step("Отправляем заказ без авторизации"):
+            response = requests.post(f"{BASE_URL}/orders", json={"ingredients": ingredient_ids[:1]})
 
-    token = reg_resp["accessToken"]
-    headers = {"Authorization": token}
+        with allure.step("Проверяем, что сервер вернул 401"):
+            assert response.status_code == 401
 
-    response = requests.post(f"{BASE_URL}/orders", json={"ingredients": []}, headers=headers)
-    data = response.json()
+    @allure.title("Создание заказа без списка ингредиентов")
+    def test_create_order_no_ingredients(self):
+        """Проверяет ошибку при заказе без ингредиентов"""
 
-    assert response.status_code == 400
-    assert data["success"] is False
-    assert "Ingredient ids must be provided" in data["message"]
+        with allure.step("Регистрируем нового пользователя"):
+            email = random_email()
+            reg_data = {"email": email, "password": TEST_PASSWORD, "name": TEST_NAME}
+            reg_resp = requests.post(f"{BASE_URL}/auth/register", json=reg_data).json()
+            token = reg_resp["accessToken"]
 
-def test_create_order_invalid_ingredient():
-    email = random_email()
-    reg_data = {"email": email, "password": TEST_PASSWORD, "name": TEST_NAME}
-    reg_reps = requests.post(f"{BASE_URL}/auth/register", json=reg_data).json()
+        with allure.step("Отправляем заказ с пустым списком ингредиентов"):
+            response = requests.post(f"{BASE_URL}/orders", json={"ingredients":[]}, headers={"Authorization": token})
+            data = response.json()
 
-    token = reg_reps["accessToken"]
-    headers = {"Authorization": token}
-    response = requests.post(
-        f"{BASE_URL}/orders", json={"ingredients": ["invalid_id"]}, headers=headers
-    )
-    assert response.status_code == 500
+        with allure.step("Проверяем ошибку 400"):
+            assert response.status_code == 400
+            assert data["success"] is False
+            assert "Ingredient ids must be provided" in data["message"]
+
+    @allure.title("Создание заказа с несуществующим ID ингредиента")
+    def test_create_order_invalid_ingredient(self):
+        """Проверяет ошибку при создании заказа с неверным ID """
+
+        with allure.step("Регистрируем нового пользователя"):
+            email = random_email()
+            reg_data = {"email": email, "password": TEST_PASSWORD, "name": TEST_NAME}
+            reg_reps = requests.post(f"{BASE_URL}/auth/register", json=reg_data).json()
+            token = reg_reps["accessToken"]
+
+        with allure.step("Пробуем отправить заказ с неверным ingredient_id"):
+            response = requests.post(
+                f"{BASE_URL}/orders", json={"ingredients": ["invalid_id_123"]},
+                headers={"Authorization": token})
+
+        with allure.step("Проверяем ошибку 500"):
+            assert response.status_code == 500
 
