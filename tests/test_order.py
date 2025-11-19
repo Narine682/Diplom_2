@@ -34,10 +34,14 @@ class TestOrders:
             ingredient_ids = [item["_id"] for item in ingredients_resp["data"]]
 
         with allure.step("Отправляем заказ без авторизации"):
-            response = requests.post(f"{BASE_URL}/orders", json={"ingredients": ingredient_ids[:1]})
+            response = requests.post(f"{BASE_URL}/orders", json={"ingredients": ingredient_ids[:2]})
+            data = response.json()
 
-        with allure.step("Проверяем, что сервер вернул 401"):
-            assert response.status_code == 401
+        with allure.step("Проверяем, что заказ успешно создан"):
+            assert response.status_code == 200
+            assert data["success"] is True
+            assert "order" in data
+            assert "number" in data["order"]
 
     @allure.title("Создание заказа без списка ингредиентов")
     def test_create_order_no_ingredients(self):
